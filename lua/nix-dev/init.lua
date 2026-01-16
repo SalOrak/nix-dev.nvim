@@ -61,7 +61,7 @@ M.nix_develop = function()
 			print("Error, not ok")
 			exec_autocmd(M.EVENTS.POST,{
 				path = vim.uv.cwd(),
-				errmsg = "[ERROR] Could not decode output from command"
+				errmsg = "[ERROR] Could not decode output from command",
 				error = true,
 			})
 			return
