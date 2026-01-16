@@ -29,6 +29,7 @@ M.PATH_VARS = {
 
 
 M.EVENTS = {
+	PRE = "NixDevPre",
 	POST = "NixDevPost",
 }
 
@@ -45,9 +46,13 @@ end
 M.nix_develop = function()
 	local opts = {output = "", stdout = vim.uv.new_pipe()}
 
-	local cwd = vim.uv.cwd()
-	vim.uv.chdir("/home/hector/personal/acidburn/")
 	local cmd = vim.split(M.command, " ")
+
+	exec_autocmd(M.EVENTS.PRE, {
+		path = vim.uv.cwd(),
+		msg = "[INFO] Activating environment",
+		cmd = cmd
+	})
 
 	vim.system(cmd, {text =true}, function(obj)
 		if obj.code ~= 0 then
@@ -97,12 +102,10 @@ M.nix_develop = function()
 			end
 		end
 	end)
-			exec_autocmd(M.EVENTS.POST,{
-				path = vim.uv.cwd(),
-				msg = "[INFO] Succesfully activated environment"
-			})
-
-	vim.uv.chdir(cwd)
+	exec_autocmd(M.EVENTS.POST,{
+		path = vim.uv.cwd(),
+		msg = "[INFO] Succesfully activated environment"
+	})
 end
 
 
