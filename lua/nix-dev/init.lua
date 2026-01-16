@@ -56,7 +56,7 @@ M.nix_develop = function()
 
 	vim.system(cmd, {text =true}, function(obj)
 		if obj.code ~= 0 then
-			vim.api.nvim_notify(string.format("[ERROR] Failed to execute with code %d", obj.code), vim.log.levels.ERROR)
+			vim.api.nvim_notify(string.format("[ERROR] Failed to execute with code %d", obj.code), vim.log.levels.ERROR, {})
 			return
 		end
 		local stdout = obj.stdout
