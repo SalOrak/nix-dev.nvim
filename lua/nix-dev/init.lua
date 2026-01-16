@@ -72,7 +72,7 @@ M.nix_develop = function()
 		if not vars then
 			exec_autocmd(M.EVENTS.POST,{
 				path = vim.uv.cwd(),
-				errmsg = "[ERROR] No 'variables' found"
+				errmsg = "[ERROR] No 'variables' found",
 				error = true,
 			})
 			return
