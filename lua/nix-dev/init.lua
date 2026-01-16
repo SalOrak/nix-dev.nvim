@@ -54,11 +54,10 @@ M.nix_develop = function()
 		cmd = cmd
 	})
 
-		vim.system(cmd, {text =true}, function(obj)
+	vim.system(cmd, {text =true}, function(obj)
+		vim.schedule(function() 
 			if obj.code ~= 0 then
-				vim.schedule(function() 
-					vim.api.nvim_notify(string.format("[ERROR] Failed to execute with code %d", obj.code), vim.log.levels.ERROR, {})
-				end)
+				vim.api.nvim_notify(string.format("[ERROR] Failed to execute with code %d", obj.code), vim.log.levels.ERROR, {})
 				exec_autocmd(M.EVENTS.POST,{
 					path = vim.uv.cwd(),
 					errmsg = obj.stderr,
@@ -109,10 +108,11 @@ M.nix_develop = function()
 				end
 			end
 		end)
-		exec_autocmd(M.EVENTS.POST,{
-			path = vim.uv.cwd(),
-			msg = "[INFO] Succesfully activated environment"
-		})
+	end)
+	exec_autocmd(M.EVENTS.POST,{
+		path = vim.uv.cwd(),
+		msg = "[INFO] Succesfully activated environment"
+	})
 end
 
 
