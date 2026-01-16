@@ -108,8 +108,10 @@ end
 
 
 M.setup = function(opts)
-	M.ignored_variables = vim.tbl_deep_extend('force', M.ignored_variables, opts.ignored_variables)
-	M.PATH_VARS = vim.tbl_deep_extend('force', M.PATH_VARS, opts.path_vars)
+	local ignored_variables = opts.ignored_variables or {}
+	local path_vars = opts.path_vars or {}
+	M.ignored_variables = vim.tbl_deep_extend('force', M.ignored_variables, ignored_variables)
+	M.PATH_VARS = vim.tbl_deep_extend('force', M.PATH_VARS, path_vars)
 	M.command = opts.command or M.command
 
 end
