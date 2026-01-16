@@ -3,23 +3,23 @@ local M = {
 }
 
 M.ignored_variables = {
-  BASHOPTS,
-  HOME,
-  NIX_BUILD_TOP,
-  NIX_ENFORCE_PURITY,
-  NIX_LOG_FD,
-  NIX_REMOTE,
-  PPID,
-  SHELL,
-  SHELLOPTS,
-  SSL_CERT_FILE,
-  TEMP,
-  TEMPDIR,
-  TERM,
-  TMP,
-  TMPDIR,
-  TZ,
-  UID,
+	BASHOPTS,
+	HOME,
+	NIX_BUILD_TOP,
+	NIX_ENFORCE_PURITY,
+	NIX_LOG_FD,
+	NIX_REMOTE,
+	PPID,
+	SHELL,
+	SHELLOPTS,
+	SSL_CERT_FILE,
+	TEMP,
+	TEMPDIR,
+	TERM,
+	TMP,
+	TMPDIR,
+	TZ,
+	UID,
 }
 
 M.PATH_VARS = {
@@ -54,58 +54,60 @@ M.nix_develop = function()
 		cmd = cmd
 	})
 
-	vim.system(cmd, {text =true}, function(obj)
-		if obj.code ~= 0 then
-			vim.api.nvim_notify(string.format("[ERROR] Failed to execute with code %d", obj.code), vim.log.levels.ERROR, {})
-			return
-		end
-		local stdout = obj.stdout
-		local ok, data= pcall(vim.json.decode, stdout)
-
-		if not ok then
-			print("Error, not ok")
-			exec_autocmd(M.EVENTS.POST,{
-				path = vim.uv.cwd(),
-				errmsg = "[ERROR] Could not decode output from command",
-				error = true,
-			})
-			return
-		end
-
-		local vars  = data["variables"]
-
-		if not vars then
-			exec_autocmd(M.EVENTS.POST,{
-				path = vim.uv.cwd(),
-				errmsg = "[ERROR] No 'variables' found",
-				error = true,
-			})
-			return
-		end
-
-		for envName, data in pairs(vars) do
-			local should_ignore = vim.tbl_contains(M.ignored_variables, envName)
-			should_ignore = should_ignore or data.type ~= "exported"
-
-			if should_ignore then return end
-
-			local sep = M.PATH_VARS[envName]
-			
-			-- Check if the env variable is a PATH type
-			if sep then
-				local path = vim.uv.os_getenv(envName)
-				if path then
-					vim.uv.os_setenv(envName, data.value .. sep .. path)
-				end
-			else
-				vim.uv.os_setenv(envName, data.value)
+	vim.schedule(function() 
+		vim.system(cmd, {text =true}, function(obj)
+			if obj.code ~= 0 then
+				vim.api.nvim_notify(string.format("[ERROR] Failed to execute with code %d", obj.code), vim.log.levels.ERROR, {})
+				return
 			end
-		end
+			local stdout = obj.stdout
+			local ok, data= pcall(vim.json.decode, stdout)
+
+			if not ok then
+				print("Error, not ok")
+				exec_autocmd(M.EVENTS.POST,{
+					path = vim.uv.cwd(),
+					errmsg = "[ERROR] Could not decode output from command",
+					error = true,
+				})
+				return
+			end
+
+			local vars  = data["variables"]
+
+			if not vars then
+				exec_autocmd(M.EVENTS.POST,{
+					path = vim.uv.cwd(),
+					errmsg = "[ERROR] No 'variables' found",
+					error = true,
+				})
+				return
+			end
+
+			for envName, data in pairs(vars) do
+				local should_ignore = vim.tbl_contains(M.ignored_variables, envName)
+				should_ignore = should_ignore or data.type ~= "exported"
+
+				if should_ignore then return end
+
+				local sep = M.PATH_VARS[envName]
+
+				-- Check if the env variable is a PATH type
+				if sep then
+					local path = vim.uv.os_getenv(envName)
+					if path then
+						vim.uv.os_setenv(envName, data.value .. sep .. path)
+					end
+				else
+					vim.uv.os_setenv(envName, data.value)
+				end
+			end
+		end)
+		exec_autocmd(M.EVENTS.POST,{
+			path = vim.uv.cwd(),
+			msg = "[INFO] Succesfully activated environment"
+		})
 	end)
-	exec_autocmd(M.EVENTS.POST,{
-		path = vim.uv.cwd(),
-		msg = "[INFO] Succesfully activated environment"
-	})
 end
 
 
