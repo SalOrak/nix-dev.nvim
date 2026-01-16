@@ -54,10 +54,11 @@ M.nix_develop = function()
 		cmd = cmd
 	})
 
-	vim.schedule(function() 
 		vim.system(cmd, {text =true}, function(obj)
 			if obj.code ~= 0 then
-				vim.api.nvim_notify(string.format("[ERROR] Failed to execute with code %d", obj.code), vim.log.levels.ERROR, {})
+				vim.schedule(function() 
+					vim.api.nvim_notify(string.format("[ERROR] Failed to execute with code %d", obj.code), vim.log.levels.ERROR, {})
+				end)
 				return
 			end
 			local stdout = obj.stdout
@@ -107,7 +108,6 @@ M.nix_develop = function()
 			path = vim.uv.cwd(),
 			msg = "[INFO] Succesfully activated environment"
 		})
-	end)
 end
 
 
