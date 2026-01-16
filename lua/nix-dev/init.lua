@@ -59,6 +59,11 @@ M.nix_develop = function()
 				vim.schedule(function() 
 					vim.api.nvim_notify(string.format("[ERROR] Failed to execute with code %d", obj.code), vim.log.levels.ERROR, {})
 				end)
+				exec_autocmd(M.EVENTS.POST,{
+					path = vim.uv.cwd(),
+					errmsg = obj.stderr,
+					error = true,
+				})
 				return
 			end
 			local stdout = obj.stdout
