@@ -1,25 +1,32 @@
 local M = {
-	command = "nix print-dev-env --extra-experimental-features 'nix-command flake' --json"
+	command = {
+		"nix",
+		"print-dev-env",
+		"--extra-experimental-features",
+		"'nix-command flake'",
+		"--json"
+	}
 }
 
+
 M.ignored_variables = {
-	BASHOPTS,
-	HOME,
-	NIX_BUILD_TOP,
-	NIX_ENFORCE_PURITY,
-	NIX_LOG_FD,
-	NIX_REMOTE,
-	PPID,
-	SHELL,
-	SHELLOPTS,
-	SSL_CERT_FILE,
-	TEMP,
-	TEMPDIR,
-	TERM,
-	TMP,
-	TMPDIR,
-	TZ,
-	UID,
+	"BASHOPTS",
+	"HOME",
+	"NIX_BUILD_TOP",
+	"NIX_ENFORCE_PURITY",
+	"NIX_LOG_FD",
+	"NIX_REMOTE",
+	"PPID",
+	"SHELL",
+	"SHELLOPTS",
+	"SSL_CERT_FILE",
+	"TEMP",
+	"TEMPDIR",
+	"TERM",
+	"TMP",
+	"TMPDIR",
+	"TZ",
+	"UID"
 }
 
 M.PATH_VARS = {
@@ -33,33 +40,57 @@ M.EVENTS = {
 	POST = "NixDevPost",
 }
 
+
 --- Fires an autocommand related to NixDev.
 ---@param pattern M.events Patter to execute
 ---@param data table Data to pass to the command
 local exec_autocmd = function(pattern, data)
 	vim.api.nvim_exec_autocmds("User", {
 		pattern = pattern,
+		modeline = false,
 		data = data
 	})
 end
 
+
+--- Try to set the environment key.
+--- It ignores anything not to be exported or inside the `ignored_variables`
+--- configuration.
+--- @param envName String Environment key to set. Example: "DEV_KEY"
+--- @param data {type: string, value: string?} From `nix print-dev-env`
+local try_setenv = function(envName, data)
+	local should_ignore = vim.list_contains(M.ignored_variables, envName)
+	should_ignore = should_ignore or data.type ~= "exported"
+
+	if should_ignore then return end
+
+	local sep = M.PATH_VARS[envName]
+
+	-- Check if the env variable is a PATH type
+	if sep then
+		local path = vim.uv.os_getenv(envName)
+		if path then
+			vim.uv.os_setenv(envName, data.value .. sep .. path)
+		end
+	else
+		vim.uv.os_setenv(envName, data.value)
+	end
+end
+
 M.nix_develop = function()
-	local opts = {output = "", stdout = vim.uv.new_pipe()}
-
-	local cmd = vim.split(M.command, " ")
-
+	local curr_path = vim.uv.cwd()
 	exec_autocmd(M.EVENTS.PRE, {
-		path = vim.uv.cwd(),
+		path = curr_path,
 		msg = "[INFO] Activating environment",
-		cmd = cmd
+		cmd = M.command
 	})
 
-	vim.system(cmd, {text =true}, function(obj)
+	vim.system(M.command, {text =true}, function(obj)
 		vim.schedule(function() 
 			if obj.code ~= 0 then
-				vim.api.nvim_notify(string.format("[ERROR] Failed to execute with code %d", obj.code), vim.log.levels.ERROR, {})
+				vim.notify(string.format("[ERROR] Failed to execute with code %d", obj.code), vim.log.levels.ERROR, {})
 				exec_autocmd(M.EVENTS.POST,{
-					path = vim.uv.cwd(),
+					path = curr_path,
 					errmsg = obj.stderr,
 					error = true,
 				})
@@ -71,7 +102,7 @@ M.nix_develop = function()
 			if not ok then
 				print("Error, not ok")
 				exec_autocmd(M.EVENTS.POST,{
-					path = vim.uv.cwd(),
+					path = curr_path,
 					errmsg = "[ERROR] Could not decode output from command",
 					error = true,
 				})
@@ -82,37 +113,24 @@ M.nix_develop = function()
 
 			if not vars then
 				exec_autocmd(M.EVENTS.POST,{
-					path = vim.uv.cwd(),
+					path = curr_path,
 					errmsg = "[ERROR] No 'variables' found",
 					error = true,
 				})
 				return
 			end
 
-			for envName, data in pairs(vars) do
-				local should_ignore = vim.tbl_contains(M.ignored_variables, envName)
-				should_ignore = should_ignore or data.type ~= "exported"
-
-				if should_ignore then return end
-
-				local sep = M.PATH_VARS[envName]
-
-				-- Check if the env variable is a PATH type
-				if sep then
-					local path = vim.uv.os_getenv(envName)
-					if path then
-						vim.uv.os_setenv(envName, data.value .. sep .. path)
-					end
-				else
-					vim.uv.os_setenv(envName, data.value)
-				end
+			for envName,data in pairs(vars) do
+				try_setenv(envName, data)
 			end
+
+			exec_autocmd(M.EVENTS.POST,{
+				path = curr_path,
+				msg = "[INFO] Succesfully activated environment"
+			})
 		end)
 	end)
-	exec_autocmd(M.EVENTS.POST,{
-		path = vim.uv.cwd(),
-		msg = "[INFO] Succesfully activated environment"
-	})
+
 end
 
 
